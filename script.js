@@ -1,24 +1,46 @@
-function sendMessage() {
+const API_KEY = 'AIzaSyDWWl9RmtPGiziwLTwpgWRR6VyBGx435Lg';
+const chatBox = document.getElementById('chat-box');
+
+async function sendMessage() {
   const input = document.getElementById('user-input');
-  const chatBox = document.getElementById('chat-box');
   const userMessage = input.value.trim();
   if (!userMessage) return;
 
-  // Add user message
-  chatBox.innerHTML += `<div class="message user">You: ${userMessage}</div>`;
-
-  // Simulate bot response
-  let botMessage = getBotResponse(userMessage);
-  chatBox.innerHTML += `<div class="message bot">Bot: ${botMessage}</div>`;
-
+  addMessage('user', `You: ${userMessage}`);
   input.value = '';
+  scrollChatToBottom();
+
+  try {
+    const botResponse = await getGeminiResponse(userMessage);
+    addMessage('bot', `Bot: ${botResponse}`);
+    scrollChatToBottom();
+  } catch (err) {
+    addMessage('bot', `Bot: Error fetching response.`);
+  }
+}
+
+function addMessage(sender, text) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `message ${sender}`;
+  msgDiv.innerText = text;
+  chatBox.appendChild(msgDiv);
+}
+
+function scrollChatToBottom() {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function getBotResponse(msg) {
-  msg = msg.toLowerCase();
-  if (msg.includes("hello") || msg.includes("hi")) return "Hello! How can I help you today?";
-  if (msg.includes("your name")) return "I'm a simple chatbot.";
-  if (msg.includes("bye")) return "Goodbye! Have a nice day!";
-  return "Sorry, I didn’t understand that.";
+async function getGeminiResponse(userInput) {
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + API_KEY;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: userInput }] }]
+    })
+  });
+
+  const data = await response.json();
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, no response.";
 }
+
